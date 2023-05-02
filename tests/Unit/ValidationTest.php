@@ -82,7 +82,13 @@ class ValidationTest extends TestCase
 
         $component->runAction('runNestedValidation');
 
-        $this->assertStringContainsString('emails.1 must be a valid email address.', $component->payload['effects']['html']);
+        if (version_compare(app()->version(), '10', '>=')) {
+            $validationMessage = 'The emails.1 field must be a valid email address.';
+        } else {
+            $validationMessage = 'emails.1 must be a valid email address.';
+        }
+
+        $this->assertStringContainsString($validationMessage, $component->payload['effects']['html']);
     }
 
     /** @test */
@@ -164,6 +170,17 @@ class ValidationTest extends TestCase
             ->call('runValidationOnlyWithFooRules', 'bar')
             ->assertDontSee('The foo field is required')
             ->assertDontSee('The bar field is required');
+    }
+
+    /** @test */
+    public function validating_only_a_specific_field_wont_throw_an_error_if_the_array_key_doesnt_exist()
+    {
+        $component = Livewire::test(ForValidation::class);
+
+        $component
+            ->set('items', [])
+            ->call('runDeeplyNestedValidationOnly', 'items.0.baz')
+            ->assertSee('items.0.baz field is required');
     }
 
     /** @test */
@@ -372,10 +389,17 @@ class ValidationTest extends TestCase
     {
         $component = Livewire::test(ForValidation::class);
 
+        if (version_compare(app()->version(), '10', '>=')) {
+            $validationMessage = 'The password field must match password confirmation.';
+        } else {
+            $validationMessage = 'The password and password confirmation must match';
+        }
+        
+
         $component
             ->set('password', 'supersecret')
             ->call('runSameValidation')
-            ->assertSee('The password and password confirmation must match');
+            ->assertSee($validationMessage);
     }
 
     /** @test */
@@ -383,11 +407,17 @@ class ValidationTest extends TestCase
     {
         $component = Livewire::test(ForValidation::class);
 
+        if (version_compare(app()->version(), '10', '>=')) {
+            $validationMessage = 'The password field must match password confirmation.';
+        } else {
+            $validationMessage = 'The password and password confirmation must match';
+        }
+
         $component
             ->set('password', 'supersecret')
             ->set('passwordConfirmation', 'supersecret')
             ->call('runSameValidation')
-            ->assertDontSee('The password and password confirmation must match');
+            ->assertDontSee($validationMessage);
     }
 
     /** @test */
@@ -482,6 +512,7 @@ class ValidationTest extends TestCase
     }
 }
 
+#[\AllowDynamicProperties]
 class ForValidation extends Component
 {
     public $foo = 'foo';
